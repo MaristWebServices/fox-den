@@ -199,6 +199,9 @@ class Bootstrap {
     }
 
     function i18n_prep() {
+        ini_set('default_charset', 'utf-8');
+        ini_set('output_encoding', 'utf-8');
+
         // MPDF requires mbstring functions
         if (!extension_loaded('mbstring')) {
             if (function_exists('iconv')) {
@@ -301,6 +304,7 @@ define('I18N_DIR', INCLUDE_DIR.'i18n/');
 #Current version && schema signature (Changes from version to version)
 define('THIS_VERSION','1.8-git'); //Shown on admin panel
 define('GIT_VERSION','$git');
+define('MAJOR_VERSION', '1.9');
 //Path separator
 if(!defined('PATH_SEPARATOR')){
     if(strpos($_ENV['OS'],'Win')!==false || !strcasecmp(substr(PHP_OS, 0, 3),'WIN'))

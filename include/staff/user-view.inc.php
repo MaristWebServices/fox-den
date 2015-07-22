@@ -28,7 +28,7 @@ $org = $user->getOrganization();
             <?php
             } else { ?>
             <a id="user-register" class="action-button pull-right user-action"
-            href="#users/<?php echo $user->getId(); ?>/register"><i class="icon-edit"></i>
+            href="#users/<?php echo $user->getId(); ?>/register"><i class="icon-smile"></i>
             <?php echo __('Register'); ?></a>
             <?php
             } ?>
@@ -96,8 +96,8 @@ $org = $user->getOrganization();
                             else
                                 echo sprintf(
                                     '<a href="#users/%d/org" class="user-action">%s</a>',
-                                    __('Add Organization'),
-                                    $user->getId());
+                                    $user->getId(),
+                                    __('Add Organization'));
                         ?>
                         </span>
                     </td>
@@ -150,18 +150,18 @@ include STAFFINC_DIR . 'templates/notes.tmpl.php';
     <a class="close" href=""><i class="icon-remove-circle"></i></a>
     <hr/>
     <p class="confirm-action" style="display:none;" id="banemail-confirm">
-        <?php echo sprintf(__('Are you sure want to <b>ban</b> %s?'), $user->getEmail()); ?>
+        <?php echo sprintf(__('Are you sure you want to <b>ban</b> %s?'), $user->getEmail()); ?>
         <br><br>
         <?php echo __('New tickets from the email address will be auto-rejected.'); ?>
     </p>
     <p class="confirm-action" style="display:none;" id="confirmlink-confirm">
         <?php echo sprintf(__(
-        'Are you sure want to send an <b>Account Activation Link</b> to <em> %s </em>?'),
+        'Are you sure you want to send an <b>Account Activation Link</b> to <em> %s </em>?'),
         $user->getEmail()); ?>
     </p>
     <p class="confirm-action" style="display:none;" id="pwreset-confirm">
         <?php echo sprintf(__(
-        'Are you sure want to send a <b>Password Reset Link</b> to <em> %s </em>?'),
+        'Are you sure you want to send a <b>Password Reset Link</b> to <em> %s </em>?'),
         $user->getEmail()); ?>
     </p>
     <div><?php echo __('Please confirm to continue.'); ?></div>
@@ -193,6 +193,7 @@ $(function() {
                 window.location.href = 'users.php';
             else
                 window.location.href = window.location.href;
+            return false;
          }, {
             onshow: function() { $('#user-search').focus(); }
          });

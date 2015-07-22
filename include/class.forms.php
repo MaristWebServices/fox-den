@@ -110,6 +110,7 @@ class Form {
             include(STAFFINC_DIR . 'templates/dynamic-form.tmpl.php');
         else
             include(CLIENTINC_DIR . 'templates/dynamic-form.tmpl.php');
+        echo $this->getMedia();
     }
 
     function getMedia() {
@@ -394,6 +395,15 @@ class FormField {
 
     function __toString() {
         return $this->toString($this->value);
+    }
+
+    /**
+     * When data for this field is deleted permanently from some storage
+     * backend (like a database), other associated data may need to be
+     * cleaned as well. This hook allows fields to participate when the data
+     * for a field is cleaned up.
+     */
+    function db_cleanup() {
     }
 
     /**
@@ -708,7 +718,7 @@ class TextboxField extends FormField {
         $config = $this->getConfiguration();
         $validators = array(
             '' =>       null,
-            'email' =>  array(array('Validator', 'is_email'),
+            'email' =>  array(array('Validator', 'is_valid_email'),
                 __('Enter a valid email address')),
             'phone' =>  array(array('Validator', 'is_phone'),
                 __('Enter a valid phone number')),
@@ -742,12 +752,20 @@ class TextboxField extends FormField {
 class PasswordField extends TextboxField {
     static $widget = 'PasswordWidget';
 
+    function parse($value) {
+        // Don't trim the value
+        return $value;
+    }
+
     function to_database($value) {
-        return Crypto::encrypt($value, SECRET_SALT, $this->getFormName());
+        // If not set in UI, don't save the empty value
+        if (!$value)
+            throw new FieldUnchanged();
+        return Crypto::encrypt($value, SECRET_SALT, 'pwfield');
     }
 
     function to_php($value) {
-        return Crypto::decrypt($value, SECRET_SALT, $this->getFormName());
+        return Crypto::decrypt($value, SECRET_SALT, 'pwfield');
     }
 }
 
@@ -1677,6 +1695,14 @@ class FileUploadField extends FormField {
         }
         return implode(', ', $files);
     }
+
+    function db_cleanup() {
+        // Delete associated attachments from the database, if any
+        $this->getFiles();
+        if (isset($this->attachments)) {
+            $this->attachments->deleteAll();
+        }
+    }
 }
 
 class Widget {
@@ -1722,8 +1748,13 @@ class Widget {
 class TextboxWidget extends Widget {
     static $input_type = 'text';
 
-    function render($mode=false) {
+    function render($mode=false, $extraConfig=false) {
         $config = $this->field->getConfiguration();
+        if (is_array($extraConfig)) {
+            foreach ($extraConfig as $k=>$v)
+                if (!isset($config[$k]) || !$config[$k])
+                    $config[$k] = $v;
+        }
         if (isset($config['size']))
             $size = "size=\"{$config['size']}\"";
         if (isset($config['length']) && $config['length'])
@@ -1751,12 +1782,19 @@ class TextboxWidget extends Widget {
 class PasswordWidget extends TextboxWidget {
     static $input_type = 'password';
 
+    function render($mode=false, $extra=false) {
+        $extra = array();
+        if ($this->field->value) {
+            $extra['placeholder'] = '••••••••••••';
+        }
+        return parent::render($mode, $extra);
+    }
+
     function parseValue() {
+        parent::parseValue();
         // Show empty box unless failed POST
-        if ($_SERVER['REQUEST_METHOD'] == 'POST'
-                && $this->field->getForm()->isValid())
-            parent::parseValue();
-        else
+        if ($_SERVER['REQUEST_METHOD'] != 'POST'
+                || !$this->field->getForm()->isValid())
             $this->value = '';
     }
 }
@@ -1882,7 +1920,7 @@ class ChoicesWidget extends Widget {
                     continue; ?>
                 <option value="<?php echo $key; ?>" <?php
                     if (isset($values[$key])) echo 'selected="selected"';
-                ?>><?php echo $name; ?></option>
+                ?>><?php echo Format::htmlchars($name); ?></option>
             <?php } ?>
         </select>
         <?php
@@ -1948,8 +1986,11 @@ class CheckboxWidget extends Widget {
 
     function getValue() {
         $data = $this->field->getSource();
-        if (count($data))
+        if (count($data)) {
+            if (!isset($data[$this->name]))
+                return false;
             return @in_array($this->field->get('id'), $data[$this->name]);
+        }
         return parent::getValue();
     }
 
@@ -2375,4 +2416,11 @@ class Q {
     }
 }
 
+/**
+ * FieldUnchanged
+ *
+ * Thrown in the to_database() method to indicate the value should not be
+ * saved in the database (it wasn't changed in the request)
+ */
+class FieldUnchanged extends Exception {}
 ?>
